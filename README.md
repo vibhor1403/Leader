@@ -9,7 +9,27 @@ The algorithm implemented for synchronization is given in this paper:
 
 There are a lot more things to do as given in the paper, but the primary aim of this project is to make this library robust. Many test cases are included for the same.
 
-As of now, **Leader election protocol** is implement to its full extent.
+As of now, **Leader election process** is implemented to its full extent.
+
+Overview
+----------
+
+As a part of Raft consensus protocol, the project in its current state implements leader election process. This process can be summarized as follows.
+
+Raft works as client-server system and all the activities are managed by the server itself. For that a leader is elected amongs all the peers, and once elected, it will be responsible for all synchronization related activites, unless something unusual happens.
+
+Inititally all servers start as FOLLOWER. Raft ensures that ther is only one leader at any particular instant. For leader election process, server 
+promote themselves as CANDIDATE and request for votes from its peers. Only after getting majority of votes (quorum size) can the candidate become LEADER.
+
+
+TODO
+-------------
+
+Many things need to be added to it to make a complete Raft library. However, in the current implementation also, some things can be added to make it more robust.
+
+1. Testing a scenario, where if a leader is chosen and suddenly that server is partitioned off from other. In such case, there can be more than one leader.
+2. Saving the current term in disk, so that when the server wakes up, reads that value.
+3. Heavy stress testing, where servers are going down and waking up very quickly. However, this scenario is highly unlikely in real environment.
 
 Usage
 --------------
@@ -51,6 +71,8 @@ The following few functions can be used:
 
 Tweaking
 -----------
+
+
 Few constants are defined in the Raft.go file which sets the timeout duration and heartbeat interval. They can be changed according to the network situtaion. However majority of code testing is done with the following default values:
 
 * `timeoutDuration = 200 miillisecond` - It determines the base duration after which follower starts a new election if no message is recieved from other servers. The actual duration is kept a bit random so that all servers don't start election at same time.
@@ -58,6 +80,8 @@ Few constants are defined in the Raft.go file which sets the timeout duration an
 * `heartbeatinterval	= 50 millisecond` - Duration in which leader sends keep alive messages to its peers.
 
 * `recieveTO = 2 second` - Timeout for listen socket. After this timeout the listen socket will get closed, if nothing is recieved on it during this time.
+
+--------------------
 
 For testing purpose also, the following constants are defined in Raft_test.go and can be altered accordingly:
 
