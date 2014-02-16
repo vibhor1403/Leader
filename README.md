@@ -21,6 +21,9 @@ Raft works as client-server system and all the activities are managed by the ser
 Inititally all servers start as FOLLOWER. Raft ensures that ther is only one leader at any particular instant. For leader election process, server 
 promote themselves as CANDIDATE and request for votes from its peers. Only after getting majority of votes (quorum size) can the candidate become LEADER.
 
+The following figure specifies the whole server states and how they can move from one state to other.
+
+![Alt text](https://f.cloud.github.com/assets/6353786/2181747/b53f24d4-9763-11e3-8cd3-3c56dc28a6f9.png)
 
 TODO
 -------------
@@ -77,7 +80,7 @@ Few constants are defined in the Raft.go file which sets the timeout duration an
 
 * `timeoutDuration = 200 miillisecond` - It determines the base duration after which follower starts a new election if no message is recieved from other servers. The actual duration is kept a bit random so that all servers don't start election at same time.
 
-* `heartbeatinterval	= 50 millisecond` - Duration in which leader sends keep alive messages to its peers.
+* `heartbeatinterval    = 50 millisecond` - Duration in which leader sends keep alive messages to its peers.
 
 * `recieveTO = 2 second` - Timeout for listen socket. After this timeout the listen socket will get closed, if nothing is recieved on it during this time.
 
