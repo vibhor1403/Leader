@@ -36,6 +36,9 @@ Many things need to be added to it to make a complete Raft library. However, in 
 
 Usage
 --------------
+
+[![GoDoc](http://godoc.org/github.com/vibhor1403/Leader/Raft?status.png)](http://godoc.org/github.com/vibhor1403/Leader/Raft)
+
 To retrieve the repository from github, use: 
 ```sh
 go get github.com/vibhor1403/Leader
