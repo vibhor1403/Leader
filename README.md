@@ -37,8 +37,6 @@ Many things need to be added to it to make a complete Raft library. However, in 
 Usage
 --------------
 
-[![GoDoc](http://godoc.org/github.com/vibhor1403/Leader/Raft?status.png)](http://godoc.org/github.com/vibhor1403/Leader/Raft)
-
 To retrieve the repository from github, use: 
 ```sh
 go get github.com/vibhor1403/Leader
@@ -61,6 +59,8 @@ This pid should be present in the config.json file. This will start the server a
 
 API's
 -------
+
+[![GoDoc](http://godoc.org/github.com/vibhor1403/Leader/Raft?status.png)](http://godoc.org/github.com/vibhor1403/Leader/Raft)
 
 The following few functions can be used:
 
