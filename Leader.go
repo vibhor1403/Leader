@@ -2,7 +2,7 @@ package main
 
 import (
 	"github.com/vibhor1403/Leader/Raft"
-	"os"
+	"fmt"
 	"flag"
 )
 
