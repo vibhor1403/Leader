@@ -126,14 +126,11 @@ func Test_NoFault(t *testing.T) {
 
 
 	total := 5
-	t.Log(fmt.Sprintf("Wait for around %d seconds for this test"))
 	var server [5]Raft.Server
 	for i := 0; i < total; i++ {
 		server[i] = Raft.New(i+1, "../config.json")
 	}
-	for i := 0; i < total; i++ {
-		fmt.Println(i, server[i].State())
-	}
+
 	wg 			:= new(sync.WaitGroup)
 	wg.Add(1)
 	
@@ -142,10 +139,10 @@ func Test_NoFault(t *testing.T) {
 	wg.Wait()
 
 	for i:=0; i<total; i++ {
-		fmt.Println("closing", i+1)
+		//fmt.Println("closing", i+1)
 		server[i].Error() <- true
 		<- server[i].ServerStopped()
-		fmt.Println("closed", i+1)
+		//fmt.Println("closed", i+1)
 	}
 	t.Log("No faults test passed.")
 
@@ -173,10 +170,10 @@ func Test_RandomFault(t *testing.T) {
 				rand := rand.New(rand.NewSource(time.Now().UnixNano()))
 				index := rand.Intn(total)
 				if server[index].State() != Raft.CLOSEDSTATE && serversClosed < MAXTOLERANCE { 
-					fmt.Println("closing" , index+1)
+					//fmt.Println("closing" , index+1)
 					server[index].Error() <- true
 					<- server[index].ServerStopped()
-					fmt.Println("closed" , index+1)
+					//fmt.Println("closed" , index+1)
 					serversClosed++
 					fmt.Println(serversClosed)
 				}
@@ -196,10 +193,10 @@ func Test_RandomFault(t *testing.T) {
 				index := rand.Intn(total)
 				if server[index].State() == Raft.CLOSEDSTATE { 
 //					server[index].Start()
-					fmt.Println("opening" , index+1)
+					//fmt.Println("opening" , index+1)
 					server[index] = Raft.New(index+1, "../config.json")
 					serversClosed--
-					fmt.Println("opened" , index+1)
+					//fmt.Println("opened" , index+1)
 					fmt.Println(serversClosed)
 				}
 				removeFault		= Raft.RandomTimer (time.Second)
@@ -219,10 +216,10 @@ func Test_RandomFault(t *testing.T) {
 	for i:=0; i<total; i++ {
 		fmt.Println(i, server[i].State())
 		if server[i].State() != Raft.CLOSEDSTATE {
-			fmt.Println("closing", i+1)
+			//fmt.Println("closing", i+1)
 			server[i].Error() <- true
 			<- server[i].ServerStopped()
-			fmt.Println("closed", i+1)
+			//fmt.Println("closed", i+1)
 		}
 	}
 	t.Log("Random faults test passed.")
@@ -255,11 +252,11 @@ func Test_KnownFault(t *testing.T) {
 					}
 				}
 				if pid != 0 && serversClosed < MAXTOLERANCE {
-					fmt.Println("closing", pid)
+					//fmt.Println("closing", pid)
 					server[pid-1].Error() <- true
 					<- server[pid-1].ServerStopped()
 					serversClosed++
-					fmt.Println("closed", pid)
+					//fmt.Println("closed", pid)
 				}
 				induceFault		= Raft.RandomTimer (time.Second)
 			case <- testChannel1.C :
@@ -278,10 +275,10 @@ func Test_KnownFault(t *testing.T) {
 	for i:=0; i<total; i++ {
 		fmt.Println(i, server[i].State())
 		if server[i].State() != Raft.CLOSEDSTATE {
-			fmt.Println("closing", i+1)
+			//fmt.Println("closing", i+1)
 			server[i].Error() <- true
 			<- server[i].ServerStopped()
-			fmt.Println("closed", i+1)
+			//fmt.Println("closed", i+1)
 		}
 	}
 	t.Log("Maximum break test passed.")
@@ -334,10 +331,10 @@ func Test_Partitioning(t *testing.T) {
 	wg.Wait()
 
 	for i:=0; i<total; i++ {
-		fmt.Println("closing", i+1)
+		//fmt.Println("closing", i+1)
 		server[i].Error() <- true
 		<- server[i].ServerStopped()
-		fmt.Println("closed", i+1)
+		//fmt.Println("closed", i+1)
 	}
 	t.Log("Partitioning test passed.")
 
