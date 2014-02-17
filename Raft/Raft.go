@@ -1,5 +1,4 @@
-//Package cluster provides interface for creating a new cluster and sending and recieving messages through sockets.
-// It also provides message structure to be passed.
+//Package Raft implements the Leader election process of Raft consensus algorithm.
 package Raft
 
 import (
