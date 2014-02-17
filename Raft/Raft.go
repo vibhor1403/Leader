@@ -30,6 +30,15 @@ const (
 	recieveTO	= 2*time.Second
 )
 
+type Debug bool
+//// For debugging capabilities..
+func (d Debug) Println(a ...interface{}) {
+	if d {
+		fmt.Println(a...)
+	}
+}
+const dbg Debug = false
+
 // Envelope describes the message structure to be followed to communicate with other servers.
 type Envelope struct {
 	//SendTo specifies the pid of the recieving system. Setting it to -1, will broadcast the message to all peers.
@@ -285,7 +294,7 @@ func CheckState(sc *ServerConfig) {
 		sc.mutex.Lock()
 		state := sc.state
 		sc.mutex.Unlock()
-		//fmt.Println("state", sc.state)
+		//dbg.Println("state", sc.state)
 
 		switch state {
 		case FOLLOWER:
@@ -297,7 +306,7 @@ func CheckState(sc *ServerConfig) {
 		case CLOSEDSTATE:
 			<- sc.Stopping
 			<- sc.Stopping
-			//fmt.Println(sc.Mypid, "stopped")
+			//dbg.Println(sc.Mypid, "stopped")
 			sc.Stopped <- true
 			return
 		}
@@ -370,22 +379,22 @@ func followerLoop(sc *ServerConfig) {
 
 	timeChan := RandomTimer(sc.electionTODuration)
 
-	//fmt.Println(sc.Mypid, "state", state)
+	//dbg.Println(sc.Mypid, "state", state)
 	for getState(sc) == FOLLOWER {
 		//wait for inbox channel
-		//fmt.Println(sc.Mypid, "waiting at channel", sc.term, sc.state)
+		//dbg.Println(sc.Mypid, "waiting at channel", sc.term, sc.state)
 		select {
 		case envelope := <-sc.Input:
-			//fmt.Println("recieve, infollower", sc.Mypid, envelope)
+			//dbg.Println("recieve, infollower", sc.Mypid, envelope)
 			// if a lower term message is recieved, send a modify message...
 			if envelope.Term < getTerm(sc) {
-				//fmt.Println(sc.Mypid, "send, infollower1", envelope.SendBy, sc.term, "MODIFY")
+				//dbg.Println(sc.Mypid, "send, infollower1", envelope.SendBy, sc.term, "MODIFY")
 				sc.Output <- &Envelope{SendTo: envelope.SendBy, SendBy: sc.Mypid, Term: getTerm(sc), Type: MODIFY}
 				// if heartbeat recieved, reset timer, update term if needed
 			} else if envelope.Term > getTerm(sc) && envelope.Type == REQUESTVOTE {
 				setTerm(sc, envelope.Term)
 				setVotedFor(sc, envelope.SendBy)
-				//fmt.Println(sc.Mypid, "send, infollower2", envelope.SendBy, getTerm(sc), "GRANTVOTE")
+				//dbg.Println(sc.Mypid, "send, infollower2", envelope.SendBy, getTerm(sc), "GRANTVOTE")
 				sc.Output <- &Envelope{SendTo: envelope.SendBy, SendBy: sc.Mypid, Term: getTerm(sc), Type: GRANTVOTE, VoteTo: envelope.SendBy}
 				// If heartbeat is recieved, sets the current term and updates leader.
 			} else if envelope.Type == HEARTBEAT {
@@ -396,10 +405,10 @@ func followerLoop(sc *ServerConfig) {
 				setTerm(sc, envelope.Term)
 				if getVotedFor(sc) == NONE {
 					setVotedFor(sc, envelope.SendBy)
-					//fmt.Println(sc.Mypid, "send, infollower3", envelope.SendBy, getTerm(sc), "GRANTVOTE")
+					//dbg.Println(sc.Mypid, "send, infollower3", envelope.SendBy, getTerm(sc), "GRANTVOTE")
 					sc.Output <- &Envelope{SendTo: envelope.SendBy, SendBy: sc.Mypid, Term: getTerm(sc), Type: GRANTVOTE, VoteTo: envelope.SendBy}
 				} else {
-					//fmt.Println(sc.Mypid, "send, infollower4", envelope.SendBy, getTerm(sc), "NOVOTE")
+					//dbg.Println(sc.Mypid, "send, infollower4", envelope.SendBy, getTerm(sc), "NOVOTE")
 					sc.Output <- &Envelope{SendTo: envelope.SendBy, SendBy: sc.Mypid, Term: getTerm(sc), Type: NOVOTE, VoteTo: sc.votedFor}
 				}
 			}
@@ -411,7 +420,7 @@ func followerLoop(sc *ServerConfig) {
 			sc.state = CANDIDATE
 			sc.votedFor = NONE
 			sc.mutex.Unlock()
-			//fmt.Println(sc.Mypid, "become candidate", sc.term, sc.state)
+			//dbg.Println(sc.Mypid, "become candidate", sc.term, sc.state)
 			// If error channel has recieved a value, close the server.
 		case <- sc.ErrorChannel :
 			closeServer(sc)
@@ -426,24 +435,24 @@ func closeServer(sc *ServerConfig) {
 	setState(sc, CLOSEDSTATE)
 	close(sc.Output)
 	close(sc.ErrorChannel)
-	close(sc.Input)
+	//close(sc.Input)
 }
 // candidateLoop realizes the logic of CANDIDATE as given in Raft consensus algorithm.
 func candidateLoop(sc *ServerConfig) {
-//	fmt.Println(sc.Mypid, "entered candidate")
+//	dbg.Println(sc.Mypid, "entered candidate")
 	// increment term
 	sc.mutex.Lock()
 	sc.term++
 	sc.mutex.Unlock()
 
-//	fmt.Println(sc.Mypid, "term", sc.term)
+//	dbg.Println(sc.Mypid, "term", sc.term)
 	// vote for self
 	setVotedFor(sc, sc.Mypid)
 	totalVotesRecieved := 1
 	//reset timer
 	timeChan := RandomTimer(sc.electionTODuration)
 	// send request for voting on all peers
-	//fmt.Println("send, incandidate", -1, sc.term)
+	//dbg.Println("send, incandidate", -1, sc.term)
 	sc.Output <- &Envelope{SendTo: -1, SendBy: sc.Mypid, Term: getTerm(sc), Type: REQUESTVOTE}
 
 	for getState(sc) == CANDIDATE {
@@ -451,10 +460,10 @@ func candidateLoop(sc *ServerConfig) {
 		select {
 		// wait for inbox channel
 		case envelope := <-sc.Input:
-			//fmt.Println("recieve incandidate", sc.Mypid, envelope)
+			//dbg.Println("recieve incandidate", sc.Mypid, envelope)
 			// if a lower term message is recieved, send a modify message...
 			if envelope.Term < getTerm(sc) {
-				//fmt.Println(sc.Mypid, "send, incandidate1", envelope.SendBy, getTerm(sc), "MODIFY")
+				//dbg.Println(sc.Mypid, "send, incandidate1", envelope.SendBy, getTerm(sc), "MODIFY")
 				sc.Output <- &Envelope{SendTo: envelope.SendBy, SendBy: sc.Mypid, Term: getTerm(sc), Type: MODIFY}
 				// if recieved message term is greater than my term, end election, become follower, return
 			} else if envelope.Type == HEARTBEAT {
@@ -462,14 +471,14 @@ func candidateLoop(sc *ServerConfig) {
 				setState(sc, FOLLOWER)
 				setVotedFor(sc, NONE)
 				setLeader(sc, envelope.SendBy)
-				//fmt.Println(sc.Mypid, "became follower")
+				//dbg.Println(sc.Mypid, "became follower")
 				return
 			} else if envelope.Term > getTerm(sc) {
 				setTerm(sc, envelope.Term)
 				// if bigger term peer requests for vote, give him vote without thinking, as your vote to yourself is stale
 				if envelope.Type == REQUESTVOTE {
 					setVotedFor(sc, envelope.SendBy)
-					//fmt.Println(sc.Mypid, "send, incandidate2", envelope.SendBy, getTerm(sc), "GRANTVOTE")
+					//dbg.Println(sc.Mypid, "send, incandidate2", envelope.SendBy, getTerm(sc), "GRANTVOTE")
 					sc.Output <- &Envelope{SendTo: envelope.SendBy, SendBy: sc.Mypid, Term: getTerm(sc), Type: GRANTVOTE, VoteTo: envelope.SendBy}
 				}
 				setState(sc, FOLLOWER)
@@ -477,7 +486,7 @@ func candidateLoop(sc *ServerConfig) {
 				// if vote is granted, add to total votes
 			} else if envelope.Type == GRANTVOTE && envelope.VoteTo == sc.Mypid {
 				totalVotesRecieved++
-//				fmt.Println("Votes", totalVotesRecieved)
+//				dbg.Println("Votes", totalVotesRecieved)
 			}
 			
 			// if majority votes recieved, become leader, return
@@ -485,13 +494,13 @@ func candidateLoop(sc *ServerConfig) {
 				setState(sc, LEADER)
 				setVotedFor(sc, NONE)
 				setLeader(sc, sc.Mypid)
-				//fmt.Println(sc.Mypid, "became leader")
+				//dbg.Println(sc.Mypid, "became leader")
 				return
 			}
 			// if timeout
 		case <-timeChan:
 			// become follower, end election.
-			//fmt.Println(sc.Mypid, "became follower again")
+			//dbg.Println(sc.Mypid, "became follower again")
 			setVotedFor(sc, NONE)
 			setState(sc, FOLLOWER)
 			// If error channel has some value.
@@ -514,18 +523,18 @@ func leaderLoop(sc *ServerConfig) {
 	for getState(sc) == LEADER {
 		select {
 		case <-heartTimeChan.C:
-			//fmt.Println(sc.Mypid, "sending heartbeat", -1, getTerm(sc))
+			dbg.Println(sc.Mypid, "sending heartbeat", -1, getTerm(sc))
 			// send message to all peers about the aliveness
 			sc.Output <- &Envelope{SendTo: -1, SendBy: sc.Mypid, Term: getTerm(sc), Type: HEARTBEAT}
 			heartTimeChan = time.NewTimer(sc.heartbeatDuration)
 
 		// wait for input
 		case envelope := <-sc.Input:
-			//fmt.Println("recieve inleader", sc.Mypid, envelope)
+			//dbg.Println("recieve inleader", sc.Mypid, envelope)
 
 			// if a lower term message is recieved, send a modify message...
 			if envelope.Term < getTerm(sc) {
-				//fmt.Println(sc.Mypid, "send, inleader1", envelope.SendBy, getTerm(sc), "MODIFY")
+				//dbg.Println(sc.Mypid, "send, inleader1", envelope.SendBy, getTerm(sc), "MODIFY")
 				sc.Output <- &Envelope{SendTo: envelope.SendBy, SendBy: sc.Mypid, Term: getTerm(sc), Type: MODIFY}
 				// if recieved message term is greater than my term, end election, become follower, return
 			} else if envelope.Type == HEARTBEAT {
@@ -533,19 +542,19 @@ func leaderLoop(sc *ServerConfig) {
 				setState(sc, FOLLOWER)
 				setVotedFor(sc, NONE)
 				setLeader(sc, envelope.SendBy)
-//				fmt.Println(sc.Mypid, "became follower")
+//				dbg.Println(sc.Mypid, "became follower")
 				return
 			} else if envelope.Term > getTerm(sc) {
 				setTerm(sc, envelope.Term)
 				// if message recieved with higher term from leader for vote request, demote itself as follower and grant vote.
 				if envelope.Type == REQUESTVOTE {
 					setVotedFor(sc, envelope.SendBy)
-					//fmt.Println(sc.Mypid, "send, inleader2", envelope.SendBy, getTerm(sc), "GRANTVOTE")
+					//dbg.Println(sc.Mypid, "send, inleader2", envelope.SendBy, getTerm(sc), "GRANTVOTE")
 					sc.Output <- &Envelope{SendTo: envelope.SendBy, SendBy: sc.Mypid, Term: getTerm(sc), Type: GRANTVOTE, VoteTo: envelope.SendBy}
 				}
 				setState(sc, FOLLOWER)
 				setVotedFor(sc, NONE)
-				//fmt.Println(sc.Mypid, "became follower again")
+				//dbg.Println(sc.Mypid, "became follower again")
 				return
 			}
 		// If error.	
@@ -563,7 +572,7 @@ func CheckInput(sc *ServerConfig) {
 		if !ok {
 			panic("channels closed..")
 		}
-		fmt.Printf("Received msg from %d to %d\n", envelope.SendBy, envelope.SendTo)
+		dbg.Println("Received msg from %d to %d", envelope.SendBy, envelope.SendTo)
 	}
 }
 
@@ -584,7 +593,7 @@ func CheckOutput(sc *ServerConfig) {
 							panic(fmt.Sprintf("Could not send message,%v,%v..%v", sc.Mypid, sc.Mypeers[i], err))
 						}
 					} else {
-						//fmt.Println(sc.Mypid, "stopped message to ", sc.Mypeers[i])
+						//dbg.Println(sc.Mypid, "stopped message to ", sc.Mypeers[i])
 						continue
 					}
 					
@@ -597,7 +606,7 @@ func CheckOutput(sc *ServerConfig) {
 						panic(fmt.Sprintf("Could not send 1message,%v,%v..%v", sc.Mypid, sc.Mypeers[findPid(sc, x.SendTo)], err))
 					}
 				} else {
-					//fmt.Println(sc.Mypid, "stopped message to ", sc.Mypeers[findPid(sc, x.SendTo)])
+					//dbg.Println(sc.Mypid, "stopped message to ", sc.Mypeers[findPid(sc, x.SendTo)])
 					continue
 				}
 			}
@@ -638,6 +647,7 @@ func Listen(sc *ServerConfig) {
 	for {
 		if getState(sc) == CLOSEDSTATE {
 			sc.Stopping <- true
+			close(sc.Input)
 			return
 		}
 		msg, err := listenSocket.Recv(0)
@@ -649,6 +659,7 @@ func Listen(sc *ServerConfig) {
 			} else {
 				//close(sc.Input)
 				sc.Stopping <- true
+				close(sc.Input)
 			}
 			return
 		}
@@ -657,6 +668,7 @@ func Listen(sc *ServerConfig) {
 		json.Unmarshal([]byte(msg), message)
 		if getState(sc) == CLOSEDSTATE {
 			sc.Stopping <- true
+			close(sc.Input)
 			return
 		} else {
 			sc.Input <- message
