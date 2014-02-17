@@ -91,11 +91,11 @@ Few constants are defined in the Raft.go file which sets the timeout duration an
 
 For testing purpose also, the following constants are defined in Raft_test.go and can be altered accordingly:
 
-* `toleranceDuration = 10 seconds` - Maximum tolerance in which if no leader is elected, test fails.
+* `toleranceDuration = 5 seconds` - Maximum tolerance in which if no leader is elected, test fails.
 
 * `pingDuration		= 100 milliseconds` - After every pingDuration current leader is found out, and if more than one leader remains, test fails.
 
-* `testDuration		= 20 seconds` - Total time for which test cases need to run.
+* `testDuration		= 10 seconds` - Total time for which test cases need to run.
 
 JSON format
 ----------------
