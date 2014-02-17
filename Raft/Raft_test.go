@@ -71,7 +71,7 @@ func testUnanimousLeadership(server [5]Raft.Server, total int, wg *sync.WaitGrou
 			for i := 0; i < total; i++ {
 				//fmt.Println(i, server[i].State())
 				if server[i].State() == Raft.LEADER {
-					fmt.Println("leader", i+1)
+					//fmt.Println("leader", i+1)
 					count++
 				}
 			}
@@ -119,66 +119,14 @@ func makeLink(server [5]Raft.Server, first int, second int) {
 	server[first].SetPartitionValue(second)
 	server[second].SetPartitionValue(first)
 }
-// Test for partitioning the network, simulating network failures.
-func Test_Partitioning(t *testing.T) {
 
-	testChannel1 := time.NewTimer(testDuration)
-	total := 5
-	var server [5]Raft.Server
-	for i := 0; i < total; i++ {
-		server[i] = Raft.New(i+1, "../config.json")
-	}
-	
-	induceFault		:= Raft.RandomTimer (time.Second)
-	go func() {
-		localCount := 0
-		for {
-			select {
-			case <- induceFault :
-				switch localCount {
-				case 0:
-					breakServer(server, 0, total)
-				case 1:
-					breakServer(server, 1, total)
-				case 5:
-					breakServer(server, 2, total)
-				case 6:
-					makeServer(server, 2, total)
-				case 7:
-					makeServer(server, 0, total)
-				case 8:
-					makeServer(server, 1, total)
-				}
-				localCount++
-				induceFault		= Raft.RandomTimer (time.Second)
-			case <- testChannel1.C :
-				return
-			}
-		}
-	}()
-	
-	wg 			:= new(sync.WaitGroup)
-	wg.Add(1)
-	
-	go 	testUnanimousLeadership(server, total, wg)
-	
-	wg.Wait()
-
-	for i:=0; i<total; i++ {
-		fmt.Println("closing", i+1)
-		server[i].Error() <- true
-		<- server[i].ServerStopped()
-		fmt.Println("closed", i+1)
-	}
-	t.Log("Partitioning test passed.")
-
-}
 
 //No fault testing (IDEAL test)
 func Test_NoFault(t *testing.T) {
 
 
 	total := 5
+	t.Log(fmt.Sprintf("Wait for around %d seconds for this test"))
 	var server [5]Raft.Server
 	for i := 0; i < total; i++ {
 		server[i] = Raft.New(i+1, "../config.json")
@@ -340,3 +288,57 @@ func Test_KnownFault(t *testing.T) {
 
 }
 
+// Test for partitioning the network, simulating network failures.
+func Test_Partitioning(t *testing.T) {
+
+	testChannel1 := time.NewTimer(testDuration)
+	total := 5
+	var server [5]Raft.Server
+	for i := 0; i < total; i++ {
+		server[i] = Raft.New(i+1, "../config.json")
+	}
+	
+	induceFault		:= Raft.RandomTimer (time.Second)
+	go func() {
+		localCount := 0
+		for {
+			select {
+			case <- induceFault :
+				switch localCount {
+				case 0:
+					breakServer(server, 0, total)
+				case 1:
+					breakServer(server, 1, total)
+				case 5:
+					breakServer(server, 2, total)
+				case 6:
+					makeServer(server, 2, total)
+				case 7:
+					makeServer(server, 0, total)
+				case 8:
+					makeServer(server, 1, total)
+				}
+				localCount++
+				induceFault		= Raft.RandomTimer (time.Second)
+			case <- testChannel1.C :
+				return
+			}
+		}
+	}()
+	
+	wg 			:= new(sync.WaitGroup)
+	wg.Add(1)
+	
+	go 	testUnanimousLeadership(server, total, wg)
+	
+	wg.Wait()
+
+	for i:=0; i<total; i++ {
+		fmt.Println("closing", i+1)
+		server[i].Error() <- true
+		<- server[i].ServerStopped()
+		fmt.Println("closed", i+1)
+	}
+	t.Log("Partitioning test passed.")
+
+}
