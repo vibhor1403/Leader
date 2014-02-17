@@ -48,9 +48,9 @@ import (
 
 // Following constants can be changed in order to do performance testing.
 const (
-	toleranceDuration 	= 10 * time.Second
+	toleranceDuration 	= 5 * time.Second
 	pingDuration		= 100 * time.Millisecond
-	testDuration		= 20 * time.Second
+	testDuration		= 10 * time.Second
 	MAXTOLERANCE		= 2
 )
 
