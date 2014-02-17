@@ -69,9 +69,9 @@ func testUnanimousLeadership(server [5]Raft.Server, total int, wg *sync.WaitGrou
 		case <- checkLeader.C :
 			count := 0 
 			for i := 0; i < total; i++ {
-				//fmt.Println(i, server[i].State())
+				//dbg.Println(i, server[i].State())
 				if server[i].State() == Raft.LEADER {
-					//fmt.Println("leader", i+1)
+					dbg.Println("leader", i+1)
 					count++
 				}
 			}
@@ -84,7 +84,7 @@ func testUnanimousLeadership(server [5]Raft.Server, total int, wg *sync.WaitGrou
 		case <- idleLimit.C :
 			panic ("No leader for so long")
 		case <- closeMe.C :
-			fmt.Println("In here")
+			dbg.Println("In here")
 			wg.Done()
 			return
 		}
@@ -120,6 +120,14 @@ func makeLink(server [5]Raft.Server, first int, second int) {
 	server[second].SetPartitionValue(first)
 }
 
+type Debug bool
+//// For debugging capabilities..
+func (d Debug) Println(a ...interface{}) {
+	if d {
+		fmt.Println(a...)
+	}
+}
+const dbg Debug = false
 
 //No fault testing (IDEAL test)
 func Test_NoFault(t *testing.T) {
@@ -129,6 +137,7 @@ func Test_NoFault(t *testing.T) {
 	var server [5]Raft.Server
 	for i := 0; i < total; i++ {
 		server[i] = Raft.New(i+1, "../config.json")
+		dbg.Println("opening ", i+1)
 	}
 
 	wg 			:= new(sync.WaitGroup)
@@ -139,10 +148,10 @@ func Test_NoFault(t *testing.T) {
 	wg.Wait()
 
 	for i:=0; i<total; i++ {
-		//fmt.Println("closing", i+1)
+		dbg.Println("closing", i+1)
 		server[i].Error() <- true
 		<- server[i].ServerStopped()
-		//fmt.Println("closed", i+1)
+		dbg.Println("closed", i+1)
 	}
 	t.Log("No faults test passed.")
 
@@ -157,6 +166,7 @@ func Test_RandomFault(t *testing.T) {
 	var server [5]Raft.Server
 	for i := 0; i < total; i++ {
 		server[i] = Raft.New(i+1, "../config.json")
+		dbg.Println("opening ", i+1)
 	}
 	
 	//can't be greater than 2
@@ -170,12 +180,12 @@ func Test_RandomFault(t *testing.T) {
 				rand := rand.New(rand.NewSource(time.Now().UnixNano()))
 				index := rand.Intn(total)
 				if server[index].State() != Raft.CLOSEDSTATE && serversClosed < MAXTOLERANCE { 
-					//fmt.Println("closing" , index+1)
+					dbg.Println("closing" , index+1)
 					server[index].Error() <- true
 					<- server[index].ServerStopped()
-					//fmt.Println("closed" , index+1)
+					dbg.Println("closed" , index+1)
 					serversClosed++
-					fmt.Println(serversClosed)
+					dbg.Println(serversClosed)
 				}
 				induceFault		= Raft.RandomTimer (time.Second)
 			case <- testChannel1.C :
@@ -192,12 +202,11 @@ func Test_RandomFault(t *testing.T) {
 				rand := rand.New(rand.NewSource(time.Now().UnixNano()))
 				index := rand.Intn(total)
 				if server[index].State() == Raft.CLOSEDSTATE { 
-//					server[index].Start()
-					//fmt.Println("opening" , index+1)
+					dbg.Println("opening" , index+1)
 					server[index] = Raft.New(index+1, "../config.json")
 					serversClosed--
-					//fmt.Println("opened" , index+1)
-					fmt.Println(serversClosed)
+					dbg.Println("opened" , index+1)
+					//dbg.Println(serversClosed)
 				}
 				removeFault		= Raft.RandomTimer (time.Second)
 			case <- testChannel2.C :
@@ -210,16 +219,15 @@ func Test_RandomFault(t *testing.T) {
 	wg.Add(1)
 	
 	go testUnanimousLeadership(server, total, wg)
-	fmt.Println("yahan")
 	wg.Wait()
-	fmt.Println("yahan2")
+	dbg.Println("yahan2")
 	for i:=0; i<total; i++ {
-		fmt.Println(i, server[i].State())
+		dbg.Println(i, server[i].State())
 		if server[i].State() != Raft.CLOSEDSTATE {
-			//fmt.Println("closing", i+1)
+			dbg.Println("closing", i+1)
 			server[i].Error() <- true
 			<- server[i].ServerStopped()
-			//fmt.Println("closed", i+1)
+			dbg.Println("closed", i+1)
 		}
 	}
 	t.Log("Random faults test passed.")
@@ -234,6 +242,7 @@ func Test_KnownFault(t *testing.T) {
 	var server [5]Raft.Server
 	for i := 0; i < total; i++ {
 		server[i] = Raft.New(i+1, "../config.json")
+		dbg.Println("opening ", i+1)
 	}
 	
 	//can't be greater than 2
@@ -252,11 +261,11 @@ func Test_KnownFault(t *testing.T) {
 					}
 				}
 				if pid != 0 && serversClosed < MAXTOLERANCE {
-					//fmt.Println("closing", pid)
+					dbg.Println("closing", pid)
 					server[pid-1].Error() <- true
 					<- server[pid-1].ServerStopped()
 					serversClosed++
-					//fmt.Println("closed", pid)
+					dbg.Println("closed", pid)
 				}
 				induceFault		= Raft.RandomTimer (time.Second)
 			case <- testChannel1.C :
@@ -269,16 +278,15 @@ func Test_KnownFault(t *testing.T) {
 	wg.Add(1)
 	
 	go testUnanimousLeadership(server, total, wg)
-	fmt.Println("yahan")
 	wg.Wait()
-	fmt.Println("yahan2")
+	dbg.Println("yahan2")
 	for i:=0; i<total; i++ {
-		fmt.Println(i, server[i].State())
+		dbg.Println(i, server[i].State())
 		if server[i].State() != Raft.CLOSEDSTATE {
-			//fmt.Println("closing", i+1)
+			dbg.Println("closing", i+1)
 			server[i].Error() <- true
 			<- server[i].ServerStopped()
-			//fmt.Println("closed", i+1)
+			dbg.Println("closed", i+1)
 		}
 	}
 	t.Log("Maximum break test passed.")
@@ -293,6 +301,7 @@ func Test_Partitioning(t *testing.T) {
 	var server [5]Raft.Server
 	for i := 0; i < total; i++ {
 		server[i] = Raft.New(i+1, "../config.json")
+		dbg.Println("opening ", i+1)
 	}
 	
 	induceFault		:= Raft.RandomTimer (time.Second)
@@ -331,10 +340,10 @@ func Test_Partitioning(t *testing.T) {
 	wg.Wait()
 
 	for i:=0; i<total; i++ {
-		//fmt.Println("closing", i+1)
+		dbg.Println("closing", i+1)
 		server[i].Error() <- true
 		<- server[i].ServerStopped()
-		//fmt.Println("closed", i+1)
+		dbg.Println("closed", i+1)
 	}
 	t.Log("Partitioning test passed.")
 
