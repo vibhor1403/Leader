@@ -514,7 +514,7 @@ func leaderLoop(sc *ServerConfig) {
 	for getState(sc) == LEADER {
 		select {
 		case <-heartTimeChan.C:
-			fmt.Println(sc.Mypid, "sending heartbeat", -1, getTerm(sc))
+			//fmt.Println(sc.Mypid, "sending heartbeat", -1, getTerm(sc))
 			// send message to all peers about the aliveness
 			sc.Output <- &Envelope{SendTo: -1, SendBy: sc.Mypid, Term: getTerm(sc), Type: HEARTBEAT}
 			heartTimeChan = time.NewTimer(sc.heartbeatDuration)
